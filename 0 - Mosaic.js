@@ -162,21 +162,9 @@ var bqaFunction = function(image){
 var createIndexs = function(image) {
   var MNDWI = null;
   var NDVI = null;
-  var MNDWI_calc = null;
-  var NDVI_calc = null;
-  var EVI = null;
-  var EVI_2 = null;
   var NDWI = null;
-  var NDWI_GAO_calc = null;
-  var CAI = null;
-  var PRI = null;
-  var SAVI = null;
-  var WVI = null;
-  var WVI_GAO = null;
-  var MMDI_v1 = null;
-  var MMDI_v2 = null; 
+  var MMRI = null;
   var NDSI = null;
-    //Gerando NDVI
     NDVI = image.expression(
       '(((banda4 - banda3)/(banda4 + banda3)))', {
         'banda4': image.select('nir'),
@@ -187,72 +175,29 @@ var createIndexs = function(image) {
         'banda5': image.select('swir1'),
         'banda4': image.select('nir')
     });
-    
-    //Gerando EVI
-    EVI = image.expression(
-      '(2.5 * ( ((banda4 - banda3)) / ((banda4 + (6 * banda3)) - (7.5 * banda1) + 1 ) )) ', {
-        'banda1' : image.select('blue'),
-        'banda3' : image.select('red'),
-        'banda4' : image.select('nir')
-      
-    });
-    
-
-     //Gerando NDWI_GAO
     NDWI = image.expression(
       '((banda2 - banda4)/ (banda4 + banda2))', {
         'banda2' : image.select('green'),
         'banda4' : image.select('nir')
       
     });
-    
-    //Gerando NDWI_GAO
-    NDWI_GAO_calc = image.expression(
-      '((banda4 - banda5)**2 / (banda4 + banda5)**2)**(1/2)', {
-        'banda4' : image.select('nir'),
-        'banda5' : image.select('swir1')
-      
-    });
- 
-    
-    //Gerando MNDWI
     MNDWI = image.expression(
       '((( banda2 - banda5) / (banda2 + banda5)))', {
         'banda2': image.select('green'),
         'banda5': image.select('swir1'),
     });
-    
-    MNDWI_calc = image.expression(
-      '(( banda2 - banda5)**2 / (banda2 + banda5)**2)**(1/2)', {
-        'banda2': image.select('green'),
-        'banda5': image.select('swir1'),
-    });
-    
-    NDVI_calc = image.expression(
-      '((banda4 - banda3)**2/ (banda4 + banda3)**2)**(1/2)', {
-        'banda4': image.select('nir'),
-        'banda3': image.select('red'),
-        'banda2': image.select('green'),
-    });
-
-  //Gerarndo MMDIv2 (Simplified Using Modules - Iury Angelo - "(abs(a-b) * abs(c+d) - abs(c-d) * abs(a+b))/(abs(a-b) * abs(c+d) + abs(c-d) * abs(a+b))"
-    MMDI_v1 = image.expression(
-      '(abs(banda2 - banda5) * abs(banda4 + banda3) - abs(banda4 - banda3) * (banda2 + banda5)) / (abs(banda2 - banda5) * abs(banda4 + banda3) + abs(banda4 - banda3) * abs(banda2 + banda5))', {
-        'banda2': image.select('green'),
-        'banda3': image.select('red'),
-        'banda4': image.select('nir'),
-        'banda5': image.select('swir1'),
+    MMRI = image.expression(
+      '(abs(MNDWI)-abs(NDVI))/(abs(MNDWI) + abs(NDVI))', {
+        'MNDWI': MNDWI,
+        'NDVI': NDVI,
   });
-
- 
   var maskedImage = image
     .addBands(image.metadata('system:time_start'))
     .addBands(NDVI.rename('NDVI'))
     .addBands(NDSI.rename('NDSI'))
     .addBands(MNDWI.rename('MNDWI'))
-    .addBands(EVI.rename('EVI'))
     .addBands(NDWI.rename('NDWI'))
-    .addBands(MMDI_v1.rename('MMRI'))
+    .addBands(MMRI.rename('MMRI'))
   return  maskedImage;
 };
 /// Main CODE
@@ -270,9 +215,11 @@ var mosaicMerge =mosaicMerge.addBands(mosaicMerge_tradicional.select(['NDSI','ND
 
 Map.addLayer(mosaicMerge,{min:0,max:1,bands:['MNDWI'], palette: paleta},'MNDWI',false);
 Map.addLayer(mosaicMerge,{min:0,max:1,bands:['NDVI'], palette: paleta},'NDVI',false);
+Map.addLayer(mosaicMerge,{min:0,max:1,bands:['MMRI'], palette: paleta},'MMRI',false);
+
 
  Export.image.toAsset({
-    image:mosaicMerge.select(['red','nir','swir1','swir2','NDVI','NDWI','NDSI']).set({'year':year,'mosaic':1,'version':5,'collection':3}).toByte(),
+    image:mosaicMerge.select(['red','nir','swir1','swir2','NDVI','NDWI','NDSI','MMRI']).set({'year':year,'mosaic':1,'version':5,'collection':3}).toByte(),
     description:'mosaico_zc_'+year+'_colecao5',
     assetId:'projects/samm/SAMM/Mosaic/'+year,
     scale: 30,
